@@ -5,6 +5,7 @@ from typing import List
 
 from rules.weighing import evaluate_weighing_test
 from rules.eccentricity import evaluate_eccentricity_test
+from rules.repeatability import evaluate_repeatability_test
 
 
 app = FastAPI(
@@ -43,6 +44,13 @@ class EccentricityTestRequest(BaseModel):
     readings: List[float]
 
 
+class RepeatabilityTestRequest(BaseModel):
+    test_load: float
+    scale_e: float
+    accuracy_class: str
+    readings: List[float]
+
+
 @app.get("/")
 def root():
     return {
@@ -72,12 +80,29 @@ def evaluate_weighing(request: WeighingTestRequest):
 
 
 @app.post("/evaluate/eccentricity")
-def evaluate_eccentricity(request: EccentricityTestRequest):
+def evaluate_eccentricity(
+    request: EccentricityTestRequest
+):
 
     result = evaluate_eccentricity_test(
         test_load=request.test_load,
         readings=request.readings,
         scale_e=request.scale_e
+    )
+
+    return result
+
+
+@app.post("/evaluate/repeatability")
+def evaluate_repeatability(
+    request: RepeatabilityTestRequest
+):
+
+    result = evaluate_repeatability_test(
+        test_load=request.test_load,
+        readings=request.readings,
+        scale_e=request.scale_e,
+        accuracy_class=request.accuracy_class
     )
 
     return result
