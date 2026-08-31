@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from typing import List
 
 from rules.weighing import evaluate_weighing_test
+from rules.eccentricity import evaluate_eccentricity_test
 
 
 app = FastAPI(
@@ -11,9 +12,14 @@ app = FastAPI(
     description="OIML R-76 Test Report System",
     version="1.0.0"
 )
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -29,6 +35,12 @@ class WeighingTestRequest(BaseModel):
     scale_e: float
     accuracy_class: str
     test_points: List[TestPoint]
+
+
+class EccentricityTestRequest(BaseModel):
+    test_load: float
+    scale_e: float
+    readings: List[float]
 
 
 @app.get("/")
@@ -54,6 +66,18 @@ def evaluate_weighing(request: WeighingTestRequest):
         scale_e=request.scale_e,
         accuracy_class=request.accuracy_class,
         test_points=test_points
+    )
+
+    return result
+
+
+@app.post("/evaluate/eccentricity")
+def evaluate_eccentricity(request: EccentricityTestRequest):
+
+    result = evaluate_eccentricity_test(
+        test_load=request.test_load,
+        readings=request.readings,
+        scale_e=request.scale_e
     )
 
     return result
