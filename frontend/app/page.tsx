@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type TestPoint = {
   load: string;
   indicated: string;
 };
 
-type ResultItem = {
+type WeighingResultItem = {
   load: number;
   indicated: number;
   error: number;
@@ -15,52 +15,123 @@ type ResultItem = {
   status: string;
 };
 
+type WeighingResult = {
+  overall_status: string;
+  details: WeighingResultItem[];
+};
+
+type EccentricityDetail = {
+  position: number;
+  indicated: number;
+  error: number;
+  status: string;
+};
+
+type EccentricityResult = {
+  test_load: number;
+  max_difference: number;
+  allowed_tolerance: number;
+  status: string;
+  details: EccentricityDetail[];
+};
+
+type RepeatabilityDetail = {
+  reading_number: number;
+  indicated: number;
+  error: number;
+  status: string;
+};
+
+type RepeatabilityResult = {
+  test_load: number;
+  accuracy_class: string;
+  required_readings: number;
+  actual_readings: number;
+  mpe_multiplier: number;
+  allowed_mpe: number;
+  minimum_reading: number;
+  maximum_reading: number;
+  repeatability_difference: number;
+  repeatability_status: string;
+  individual_status: string;
+  overall_status: string;
+  details: RepeatabilityDetail[];
+};
+
 export default function Home() {
   const [step, setStep] = useState(1);
 
-  // Step 1
+  // =========================
+  // STEP 1
+  // =========================
+
   const [instrumentName, setInstrumentName] = useState("");
   const [manufacturer, setManufacturer] = useState("");
   const [model, setModel] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
 
-  // Step 2
+  // =========================
+  // STEP 2
+  // =========================
+
   const [accuracyClass, setAccuracyClass] = useState("CLASS III");
   const [capacity, setCapacity] = useState("150");
   const [scaleE, setScaleE] = useState("0.05");
 
-  // Step 3
+  // =========================
+  // STEP 3
+  // =========================
+
   const [testPoints, setTestPoints] = useState<TestPoint[]>([
-    { load: "", indicated: "" },
+    {
+      load: "",
+      indicated: "",
+    },
   ]);
 
-  const [result, setResult] = useState<{
-    overall_status: string;
-    details: ResultItem[];
-  } | null>(null);
+  const [weighingResult, setWeighingResult] =
+    useState<WeighingResult | null>(null);
 
-  const [loading, setLoading] = useState(false);
+  const [weighingLoading, setWeighingLoading] = useState(false);
 
-  // Step 4 - Eccentricity
+  // =========================
+  // STEP 4
+  // =========================
+
   const [eccentricityLoad, setEccentricityLoad] = useState("");
-  const [eccentricityReadings, setEccentricityReadings] = useState<
-    string[]
-  >(["", "", "", ""]);
 
-  const [eccentricityResult, setEccentricityResult] = useState<any>(null);
-  const [eccentricityLoading, setEccentricityLoading] = useState(false);
+  const [eccentricityReadings, setEccentricityReadings] =
+    useState<string[]>([
+      "",
+      "",
+      "",
+      "",
+    ]);
 
-  // Step 5 - Repeatability
+  const [eccentricityResult, setEccentricityResult] =
+    useState<EccentricityResult | null>(null);
+
+  const [eccentricityLoading, setEccentricityLoading] =
+    useState(false);
+
+  // =========================
+  // STEP 5
+  // =========================
+
   const [repeatabilityLoad, setRepeatabilityLoad] = useState("");
-  const [repeatabilityReadings, setRepeatabilityReadings] = useState<
-    string[]
-  >([]);
+
+  const [repeatabilityReadings, setRepeatabilityReadings] =
+    useState<string[]>([]);
 
   const [repeatabilityResult, setRepeatabilityResult] =
-    useState<any>(null);
+    useState<RepeatabilityResult | null>(null);
 
   const [repeatabilityLoading, setRepeatabilityLoading] =
     useState(false);
+
+  // =========================
+  // NAVIGATION
+  // =========================
 
   const nextStep = () => {
     if (step < 7) {
@@ -74,43 +145,76 @@ export default function Home() {
     }
   };
 
-  // Step 2 calculations
+  // =========================
+  // STEP 2 CALCULATIONS
+  // =========================
+
   const divisions =
     Number(capacity) > 0 && Number(scaleE) > 0
       ? Number(capacity) / Number(scaleE)
       : 0;
 
   const getMpeMultiplier = () => {
-    if (divisions <= 0) return 0;
+    if (divisions <= 0) {
+      return 0;
+    }
 
     if (accuracyClass === "CLASS I") {
-      if (divisions <= 50000) return 0.5;
-      if (divisions <= 200000) return 1.0;
+      if (divisions <= 50000) {
+        return 0.5;
+      }
+
+      if (divisions <= 200000) {
+        return 1.0;
+      }
+
       return 1.5;
     }
 
     if (accuracyClass === "CLASS II") {
-      if (divisions <= 5000) return 0.5;
-      if (divisions <= 20000) return 1.0;
+      if (divisions <= 5000) {
+        return 0.5;
+      }
+
+      if (divisions <= 20000) {
+        return 1.0;
+      }
+
       return 1.5;
     }
 
     if (accuracyClass === "CLASS III") {
-      if (divisions <= 500) return 0.5;
-      if (divisions <= 2000) return 1.0;
+      if (divisions <= 500) {
+        return 0.5;
+      }
+
+      if (divisions <= 2000) {
+        return 1.0;
+      }
+
       return 1.5;
     }
 
-    if (divisions <= 50) return 0.5;
-    if (divisions <= 200) return 1.0;
+    if (divisions <= 50) {
+      return 0.5;
+    }
+
+    if (divisions <= 200) {
+      return 1.0;
+    }
 
     return 1.5;
   };
 
   const mpeMultiplier = getMpeMultiplier();
-  const allowedMpe = Number(scaleE) * mpeMultiplier;
 
-  // Step 3 functions
+  const allowedMpe =
+    Number(scaleE) * mpeMultiplier;
+
+  // =========================
+  // STEP 3 FUNCTIONS
+  // =========================
+
   const addTestPoint = () => {
     setTestPoints([
       ...testPoints,
@@ -122,9 +226,13 @@ export default function Home() {
   };
 
   const removeTestPoint = (index: number) => {
-    if (testPoints.length === 1) return;
+    if (testPoints.length === 1) {
+      return;
+    }
 
-    setTestPoints(testPoints.filter((_, i) => i !== index));
+    setTestPoints(
+      testPoints.filter((_, i) => i !== index)
+    );
   };
 
   const updateTestPoint = (
@@ -144,7 +252,9 @@ export default function Home() {
 
   const evaluateWeighingTest = async () => {
     const validPoints = testPoints.filter(
-      (point) => point.load !== "" && point.indicated !== ""
+      (point) =>
+        point.load !== "" &&
+        point.indicated !== ""
     );
 
     if (validPoints.length === 0) {
@@ -152,8 +262,8 @@ export default function Home() {
       return;
     }
 
-    setLoading(true);
-    setResult(null);
+    setWeighingLoading(true);
+    setWeighingResult(null);
 
     try {
       const response = await fetch(
@@ -166,51 +276,72 @@ export default function Home() {
           body: JSON.stringify({
             scale_e: Number(scaleE),
             accuracy_class: accuracyClass,
-            test_points: validPoints.map((point) => ({
-              load: Number(point.load),
-              indicated: Number(point.indicated),
-            })),
+            test_points: validPoints.map(
+              (point) => ({
+                load: Number(point.load),
+                indicated: Number(point.indicated),
+              })
+            ),
           }),
         }
       );
 
       if (!response.ok) {
-        throw new Error("Backend evaluation failed");
+        throw new Error(
+          "Backend evaluation failed"
+        );
       }
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
-      setResult(data);
+      setWeighingResult(data);
     } catch (error) {
       console.error(error);
-      alert("Could not connect to backend.");
+      alert(
+        "Could not connect to backend."
+      );
     } finally {
-      setLoading(false);
+      setWeighingLoading(false);
     }
   };
 
-  // Step 4 - Eccentricity
+  // =========================
+  // STEP 4 FUNCTIONS
+  // =========================
+
   const updateEccentricityReading = (
     index: number,
     value: string
   ) => {
-    const updated = [...eccentricityReadings];
+    const updated = [
+      ...eccentricityReadings,
+    ];
+
     updated[index] = value;
-    setEccentricityReadings(updated);
+
+    setEccentricityReadings(
+      updated
+    );
   };
 
   const evaluateEccentricity = async () => {
-    const validReadings = eccentricityReadings.filter(
-      (reading) => reading !== ""
-    );
-
     if (eccentricityLoad === "") {
-      alert("Please enter the test load.");
+      alert(
+        "Please enter the eccentricity test load."
+      );
       return;
     }
 
-    if (validReadings.length !== 4) {
-      alert("Please enter all 4 eccentricity readings.");
+    const validReadings =
+      eccentricityReadings.filter(
+        (reading) => reading !== ""
+      );
+
+    if (validReadings.length === 0) {
+      alert(
+        "Please enter eccentricity readings."
+      );
       return;
     }
 
@@ -226,64 +357,93 @@ export default function Home() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            test_load: Number(eccentricityLoad),
-            scale_e: Number(scaleE),
-            readings: validReadings.map(Number),
+            test_load:
+              Number(eccentricityLoad),
+
+            scale_e:
+              Number(scaleE),
+
+            readings:
+              validReadings.map(Number),
           }),
         }
       );
 
       if (!response.ok) {
-        throw new Error("Eccentricity evaluation failed");
+        throw new Error(
+          "Eccentricity evaluation failed"
+        );
       }
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       setEccentricityResult(data);
     } catch (error) {
       console.error(error);
-      alert("Could not connect to backend.");
+      alert(
+        "Could not connect to backend."
+      );
     } finally {
       setEccentricityLoading(false);
     }
   };
 
-  // Step 5 - Repeatability
+  // =========================
+  // STEP 5 FUNCTIONS
+  // =========================
+
   const requiredRepeatabilityReadings =
     accuracyClass === "CLASS I" ||
     accuracyClass === "CLASS II"
       ? 6
       : 3;
 
-  const initializeRepeatabilityReadings = () => {
+  useEffect(() => {
     setRepeatabilityReadings(
       Array(requiredRepeatabilityReadings).fill("")
     );
+
     setRepeatabilityResult(null);
-  };
+  }, [
+    accuracyClass,
+    requiredRepeatabilityReadings,
+  ]);
 
   const updateRepeatabilityReading = (
     index: number,
     value: string
   ) => {
-    const updated = [...repeatabilityReadings];
+    const updated = [
+      ...repeatabilityReadings,
+    ];
+
     updated[index] = value;
-    setRepeatabilityReadings(updated);
+
+    setRepeatabilityReadings(
+      updated
+    );
   };
 
   const evaluateRepeatability = async () => {
-    const validReadings = repeatabilityReadings.filter(
-      (reading) => reading !== ""
-    );
-
     if (repeatabilityLoad === "") {
-      alert("Please enter the test load.");
+      alert(
+        "Please enter the repeatability test load."
+      );
       return;
     }
 
-    if (validReadings.length !== requiredRepeatabilityReadings) {
+    const validReadings =
+      repeatabilityReadings.filter(
+        (reading) => reading !== ""
+      );
+
+    if (
+      validReadings.length !==
+      requiredRepeatabilityReadings
+    ) {
       alert(
-        `Please enter all ${requiredRepeatabilityReadings} readings.`
+        `Please enter all ${requiredRepeatabilityReadings} required readings.`
       );
       return;
     }
@@ -300,24 +460,36 @@ export default function Home() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            test_load: Number(repeatabilityLoad),
-            scale_e: Number(scaleE),
-            accuracy_class: accuracyClass,
-            readings: validReadings.map(Number),
+            test_load:
+              Number(repeatabilityLoad),
+
+            scale_e:
+              Number(scaleE),
+
+            accuracy_class:
+              accuracyClass,
+
+            readings:
+              validReadings.map(Number),
           }),
         }
       );
 
       if (!response.ok) {
-        throw new Error("Repeatability evaluation failed");
+        throw new Error(
+          "Repeatability evaluation failed"
+        );
       }
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       setRepeatabilityResult(data);
     } catch (error) {
       console.error(error);
-      alert("Could not connect to backend.");
+      alert(
+        "Could not connect to backend."
+      );
     } finally {
       setRepeatabilityLoading(false);
     }
@@ -327,8 +499,12 @@ export default function Home() {
     <main className="min-h-screen bg-slate-100 p-6 md:p-10">
       <div className="mx-auto max-w-5xl">
 
-        {/* Header */}
+        {/* ========================= */}
+        {/* HEADER */}
+        {/* ========================= */}
+
         <div className="mb-8">
+
           <h1 className="text-4xl font-bold text-slate-900">
             OIML-MetricFlow
           </h1>
@@ -336,9 +512,13 @@ export default function Home() {
           <p className="mt-2 text-slate-600">
             OIML R-76 Weighing Instrument Test System
           </p>
+
         </div>
 
-        {/* Progress */}
+        {/* ========================= */}
+        {/* PROGRESS */}
+        {/* ========================= */}
+
         <div className="mb-8 rounded-2xl bg-white p-5 shadow-sm">
 
           <div className="flex items-center justify-between text-sm">
@@ -348,13 +528,28 @@ export default function Home() {
             </div>
 
             <div className="text-slate-500">
-              {step === 1 && "Instrument Information"}
-              {step === 2 && "Accuracy & Capacity"}
-              {step === 3 && "Weighing Test"}
-              {step === 4 && "Eccentricity Test"}
-              {step === 5 && "Repeatability Test"}
-              {step === 6 && "Tare / Zero Test"}
-              {step === 7 && "Final Review"}
+
+              {step === 1 &&
+                "Instrument Information"}
+
+              {step === 2 &&
+                "Accuracy & Capacity"}
+
+              {step === 3 &&
+                "Weighing Test"}
+
+              {step === 4 &&
+                "Eccentricity Test"}
+
+              {step === 5 &&
+                "Repeatability Test"}
+
+              {step === 6 &&
+                "Tare / Zero Test"}
+
+              {step === 7 &&
+                "Final Review"}
+
             </div>
 
           </div>
@@ -372,7 +567,10 @@ export default function Home() {
 
         </div>
 
+        {/* ========================= */}
         {/* STEP 1 */}
+        {/* ========================= */}
+
         {step === 1 && (
           <div className="rounded-2xl bg-white p-6 shadow-sm md:p-8">
 
@@ -391,6 +589,7 @@ export default function Home() {
             <div className="grid gap-6 md:grid-cols-2">
 
               <div>
+
                 <label className="font-medium text-slate-800">
                   Instrument Name
                 </label>
@@ -399,14 +598,18 @@ export default function Home() {
                   type="text"
                   value={instrumentName}
                   onChange={(e) =>
-                    setInstrumentName(e.target.value)
+                    setInstrumentName(
+                      e.target.value
+                    )
                   }
                   placeholder="e.g. Platform Weighing Scale"
                   className="mt-2 w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500"
                 />
+
               </div>
 
               <div>
+
                 <label className="font-medium text-slate-800">
                   Manufacturer
                 </label>
@@ -415,14 +618,18 @@ export default function Home() {
                   type="text"
                   value={manufacturer}
                   onChange={(e) =>
-                    setManufacturer(e.target.value)
+                    setManufacturer(
+                      e.target.value
+                    )
                   }
                   placeholder="e.g. ABC Weighing Systems"
                   className="mt-2 w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500"
                 />
+
               </div>
 
               <div>
+
                 <label className="font-medium text-slate-800">
                   Model
                 </label>
@@ -430,13 +637,17 @@ export default function Home() {
                 <input
                   type="text"
                   value={model}
-                  onChange={(e) => setModel(e.target.value)}
+                  onChange={(e) =>
+                    setModel(e.target.value)
+                  }
                   placeholder="e.g. AWS-150"
                   className="mt-2 w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500"
                 />
+
               </div>
 
               <div>
+
                 <label className="font-medium text-slate-800">
                   Serial Number
                 </label>
@@ -445,11 +656,14 @@ export default function Home() {
                   type="text"
                   value={serialNumber}
                   onChange={(e) =>
-                    setSerialNumber(e.target.value)
+                    setSerialNumber(
+                      e.target.value
+                    )
                   }
                   placeholder="e.g. SN-2026-001"
                   className="mt-2 w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500"
                 />
+
               </div>
 
             </div>
@@ -468,7 +682,10 @@ export default function Home() {
           </div>
         )}
 
+        {/* ========================= */}
         {/* STEP 2 */}
+        {/* ========================= */}
+
         {step === 2 && (
           <div className="rounded-2xl bg-white p-6 shadow-sm md:p-8">
 
@@ -487,6 +704,7 @@ export default function Home() {
             <div className="grid gap-6 md:grid-cols-3">
 
               <div>
+
                 <label className="font-medium text-slate-800">
                   Accuracy Class
                 </label>
@@ -494,18 +712,35 @@ export default function Home() {
                 <select
                   value={accuracyClass}
                   onChange={(e) =>
-                    setAccuracyClass(e.target.value)
+                    setAccuracyClass(
+                      e.target.value
+                    )
                   }
                   className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3"
                 >
-                  <option>CLASS I</option>
-                  <option>CLASS II</option>
-                  <option>CLASS III</option>
-                  <option>CLASS IIII</option>
+
+                  <option>
+                    CLASS I
+                  </option>
+
+                  <option>
+                    CLASS II
+                  </option>
+
+                  <option>
+                    CLASS III
+                  </option>
+
+                  <option>
+                    CLASS IIII
+                  </option>
+
                 </select>
+
               </div>
 
               <div>
+
                 <label className="font-medium text-slate-800">
                   Maximum Capacity (Max)
                 </label>
@@ -514,13 +749,17 @@ export default function Home() {
                   type="number"
                   value={capacity}
                   onChange={(e) =>
-                    setCapacity(e.target.value)
+                    setCapacity(
+                      e.target.value
+                    )
                   }
                   className="mt-2 w-full rounded-xl border border-slate-300 p-3"
                 />
+
               </div>
 
               <div>
+
                 <label className="font-medium text-slate-800">
                   Scale Interval (e)
                 </label>
@@ -529,11 +768,14 @@ export default function Home() {
                   type="number"
                   value={scaleE}
                   onChange={(e) =>
-                    setScaleE(e.target.value)
+                    setScaleE(
+                      e.target.value
+                    )
                   }
                   className="mt-2 w-full rounded-xl border border-slate-300 p-3"
                   step="0.001"
                 />
+
               </div>
 
             </div>
@@ -547,6 +789,7 @@ export default function Home() {
               <div className="mt-5 grid gap-4 md:grid-cols-3">
 
                 <div className="rounded-xl bg-white p-4 shadow-sm">
+
                   <p className="text-sm text-slate-500">
                     Verification Scale Divisions
                   </p>
@@ -556,9 +799,11 @@ export default function Home() {
                       ? `${divisions.toLocaleString()}e`
                       : "—"}
                   </p>
+
                 </div>
 
                 <div className="rounded-xl bg-white p-4 shadow-sm">
+
                   <p className="text-sm text-slate-500">
                     MPE Multiplier
                   </p>
@@ -568,18 +813,23 @@ export default function Home() {
                       ? `±${mpeMultiplier}e`
                       : "—"}
                   </p>
+
                 </div>
 
                 <div className="rounded-xl bg-white p-4 shadow-sm">
+
                   <p className="text-sm text-slate-500">
                     Allowed Error
                   </p>
 
                   <p className="mt-1 text-2xl font-bold">
                     {allowedMpe > 0
-                      ? `±${allowedMpe.toFixed(6)}`
+                      ? `±${allowedMpe.toFixed(
+                          6
+                        )}`
                       : "—"}
                   </p>
+
                 </div>
 
               </div>
@@ -607,7 +857,10 @@ export default function Home() {
           </div>
         )}
 
+        {/* ========================= */}
         {/* STEP 3 */}
+        {/* ========================= */}
+
         {step === 3 && (
           <div className="rounded-2xl bg-white p-6 shadow-sm md:p-8">
 
@@ -618,8 +871,7 @@ export default function Home() {
               </h2>
 
               <p className="mt-2 text-slate-600">
-                Enter the applied load and indicated value for each
-                test point.
+                Enter the applied load and indicated value for each test point.
               </p>
 
             </div>
@@ -629,6 +881,7 @@ export default function Home() {
               <table className="w-full border-collapse">
 
                 <thead>
+
                   <tr className="bg-slate-100">
 
                     <th className="border p-3 text-left">
@@ -648,73 +901,81 @@ export default function Home() {
                     </th>
 
                   </tr>
+
                 </thead>
 
                 <tbody>
 
-                  {testPoints.map((point, index) => (
+                  {testPoints.map(
+                    (point, index) => (
 
-                    <tr key={index}>
+                      <tr key={index}>
 
-                      <td className="border p-3 font-semibold">
-                        {index + 1}
-                      </td>
+                        <td className="border p-3 font-semibold">
+                          {index + 1}
+                        </td>
 
-                      <td className="border p-3">
+                        <td className="border p-3">
 
-                        <input
-                          type="number"
-                          value={point.load}
-                          onChange={(e) =>
-                            updateTestPoint(
-                              index,
-                              "load",
-                              e.target.value
-                            )
-                          }
-                          placeholder="e.g. 100"
-                          className="w-full rounded-lg border border-slate-300 p-3"
-                          step="0.001"
-                        />
+                          <input
+                            type="number"
+                            value={point.load}
+                            onChange={(e) =>
+                              updateTestPoint(
+                                index,
+                                "load",
+                                e.target.value
+                              )
+                            }
+                            placeholder="e.g. 100"
+                            className="w-full rounded-lg border border-slate-300 p-3"
+                            step="0.001"
+                          />
 
-                      </td>
+                        </td>
 
-                      <td className="border p-3">
+                        <td className="border p-3">
 
-                        <input
-                          type="number"
-                          value={point.indicated}
-                          onChange={(e) =>
-                            updateTestPoint(
-                              index,
-                              "indicated",
-                              e.target.value
-                            )
-                          }
-                          placeholder="e.g. 100.040"
-                          className="w-full rounded-lg border border-slate-300 p-3"
-                          step="0.001"
-                        />
+                          <input
+                            type="number"
+                            value={point.indicated}
+                            onChange={(e) =>
+                              updateTestPoint(
+                                index,
+                                "indicated",
+                                e.target.value
+                              )
+                            }
+                            placeholder="e.g. 100.040"
+                            className="w-full rounded-lg border border-slate-300 p-3"
+                            step="0.001"
+                          />
 
-                      </td>
+                        </td>
 
-                      <td className="border p-3 text-center">
+                        <td className="border p-3 text-center">
 
-                        <button
-                          onClick={() =>
-                            removeTestPoint(index)
-                          }
-                          disabled={testPoints.length === 1}
-                          className="rounded-lg border border-red-300 px-4 py-2 font-medium text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
-                        >
-                          Remove
-                        </button>
+                          <button
+                            onClick={() =>
+                              removeTestPoint(
+                                index
+                              )
+                            }
+                            disabled={
+                              testPoints.length ===
+                              1
+                            }
+                            className="rounded-lg border border-red-300 px-4 py-2 font-medium text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
+                          >
+                            Remove
+                          </button>
 
-                      </td>
+                        </td>
 
-                    </tr>
+                      </tr>
 
-                  ))}
+                    )
+                  )}
 
                 </tbody>
 
@@ -733,17 +994,17 @@ export default function Home() {
 
               <button
                 onClick={evaluateWeighingTest}
-                disabled={loading}
+                disabled={weighingLoading}
                 className="w-full rounded-xl bg-black px-6 py-4 font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {loading
+                {weighingLoading
                   ? "Evaluating..."
                   : "Evaluate Weighing Test"}
               </button>
 
             </div>
 
-            {result && (
+            {weighingResult && (
               <div className="mt-8">
 
                 <div className="rounded-xl bg-slate-50 p-5">
@@ -752,8 +1013,15 @@ export default function Home() {
                     Overall Status
                   </p>
 
-                  <p className="mt-1 text-2xl font-bold">
-                    {result.overall_status}
+                  <p
+                    className={`mt-1 text-2xl font-bold ${
+                      weighingResult.overall_status ===
+                      "PASS"
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {weighingResult.overall_status}
                   </p>
 
                 </div>
@@ -792,7 +1060,7 @@ export default function Home() {
 
                     <tbody>
 
-                      {result.details.map(
+                      {weighingResult.details.map(
                         (item, index) => (
 
                           <tr key={index}>
@@ -814,7 +1082,18 @@ export default function Home() {
                             </td>
 
                             <td className="border p-3 text-center font-bold">
-                              {item.status}
+
+                              <span
+                                className={
+                                  item.status ===
+                                  "PASS"
+                                    ? "text-green-600"
+                                    : "text-red-600"
+                                }
+                              >
+                                {item.status}
+                              </span>
+
                             </td>
 
                           </tr>
@@ -852,7 +1131,10 @@ export default function Home() {
           </div>
         )}
 
+        {/* ========================= */}
         {/* STEP 4 */}
+        {/* ========================= */}
+
         {step === 4 && (
           <div className="rounded-2xl bg-white p-6 shadow-sm md:p-8">
 
@@ -863,8 +1145,7 @@ export default function Home() {
               </h2>
 
               <p className="mt-2 text-slate-600">
-                Enter the test load and readings for the
-                eccentricity positions.
+                Enter the test load and indicated values for each position.
               </p>
 
             </div>
@@ -879,7 +1160,9 @@ export default function Home() {
                 type="number"
                 value={eccentricityLoad}
                 onChange={(e) =>
-                  setEccentricityLoad(e.target.value)
+                  setEccentricityLoad(
+                    e.target.value
+                  )
                 }
                 placeholder="e.g. 120"
                 className="mt-2 w-full rounded-xl border border-slate-300 p-3"
@@ -888,45 +1171,75 @@ export default function Home() {
 
             </div>
 
-            <div className="mt-8 grid gap-6 md:grid-cols-2">
+            <div className="mt-8 overflow-x-auto">
 
-              {eccentricityReadings.map(
-                (reading, index) => (
+              <table className="w-full border-collapse">
 
-                  <div key={index}>
+                <thead>
 
-                    <label className="font-medium text-slate-800">
-                      Position {index + 1}
-                    </label>
+                  <tr className="bg-slate-100">
 
-                    <input
-                      type="number"
-                      value={reading}
-                      onChange={(e) =>
-                        updateEccentricityReading(
-                          index,
-                          e.target.value
-                        )
-                      }
-                      placeholder={`Reading at Position ${
-                        index + 1
-                      }`}
-                      className="mt-2 w-full rounded-xl border border-slate-300 p-3"
-                      step="0.001"
-                    />
+                    <th className="border p-3">
+                      Position
+                    </th>
 
-                  </div>
+                    <th className="border p-3">
+                      Indicated Value
+                    </th>
 
-                )
-              )}
+                  </tr>
+
+                </thead>
+
+                <tbody>
+
+                  {eccentricityReadings.map(
+                    (reading, index) => (
+
+                      <tr key={index}>
+
+                        <td className="border p-3 text-center font-semibold">
+                          Position {index + 1}
+                        </td>
+
+                        <td className="border p-3">
+
+                          <input
+                            type="number"
+                            value={reading}
+                            onChange={(e) =>
+                              updateEccentricityReading(
+                                index,
+                                e.target.value
+                              )
+                            }
+                            placeholder="Enter indicated value"
+                            className="w-full rounded-lg border border-slate-300 p-3"
+                            step="0.001"
+                          />
+
+                        </td>
+
+                      </tr>
+
+                    )
+                  )}
+
+                </tbody>
+
+              </table>
 
             </div>
 
             <div className="mt-8">
 
               <button
-                onClick={evaluateEccentricity}
-                disabled={eccentricityLoading}
+                onClick={
+                  evaluateEccentricity
+                }
+                disabled={
+                  eccentricityLoading
+                }
                 className="w-full rounded-xl bg-black px-6 py-4 font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {eccentricityLoading
@@ -937,19 +1250,145 @@ export default function Home() {
             </div>
 
             {eccentricityResult && (
-              <div className="mt-8 rounded-2xl bg-slate-50 p-6">
+              <div className="mt-8">
 
-                <h3 className="text-lg font-semibold">
-                  Eccentricity Result
-                </h3>
+                <div className="grid gap-4 md:grid-cols-3">
 
-                <pre className="mt-4 overflow-x-auto rounded-xl bg-white p-4 text-sm">
-                  {JSON.stringify(
-                    eccentricityResult,
-                    null,
-                    2
-                  )}
-                </pre>
+                  <div className="rounded-xl bg-slate-50 p-5">
+
+                    <p className="text-sm text-slate-500">
+                      Test Load
+                    </p>
+
+                    <p className="mt-1 text-xl font-bold">
+                      {
+                        eccentricityResult.test_load
+                      }
+                    </p>
+
+                  </div>
+
+                  <div className="rounded-xl bg-slate-50 p-5">
+
+                    <p className="text-sm text-slate-500">
+                      Maximum Difference
+                    </p>
+
+                    <p className="mt-1 text-xl font-bold">
+                      {
+                        eccentricityResult.max_difference
+                      }
+                    </p>
+
+                  </div>
+
+                  <div className="rounded-xl bg-slate-50 p-5">
+
+                    <p className="text-sm text-slate-500">
+                      Allowed Tolerance
+                    </p>
+
+                    <p className="mt-1 text-xl font-bold">
+                      {
+                        eccentricityResult.allowed_tolerance
+                      }
+                    </p>
+
+                  </div>
+
+                </div>
+
+                <div className="mt-5 rounded-xl bg-slate-50 p-5">
+
+                  <p className="text-sm text-slate-500">
+                    Overall Status
+                  </p>
+
+                  <p
+                    className={`mt-1 text-2xl font-bold ${
+                      eccentricityResult.status ===
+                      "PASS"
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {eccentricityResult.status}
+                  </p>
+
+                </div>
+
+                <div className="mt-5 overflow-x-auto">
+
+                  <table className="w-full border-collapse">
+
+                    <thead>
+
+                      <tr className="bg-slate-100">
+
+                        <th className="border p-3">
+                          Position
+                        </th>
+
+                        <th className="border p-3">
+                          Indicated
+                        </th>
+
+                        <th className="border p-3">
+                          Error
+                        </th>
+
+                        <th className="border p-3">
+                          Status
+                        </th>
+
+                      </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                      {eccentricityResult.details.map(
+                        (item, index) => (
+
+                          <tr key={index}>
+
+                            <td className="border p-3 text-center">
+                              {item.position}
+                            </td>
+
+                            <td className="border p-3 text-center">
+                              {item.indicated}
+                            </td>
+
+                            <td className="border p-3 text-center">
+                              {item.error}
+                            </td>
+
+                            <td className="border p-3 text-center font-bold">
+
+                              <span
+                                className={
+                                  item.status ===
+                                  "PASS"
+                                    ? "text-green-600"
+                                    : "text-red-600"
+                                }
+                              >
+                                {item.status}
+                              </span>
+
+                            </td>
+
+                          </tr>
+
+                        )
+                      )}
+
+                    </tbody>
+
+                  </table>
+
+                </div>
 
               </div>
             )}
@@ -975,7 +1414,10 @@ export default function Home() {
           </div>
         )}
 
-        {/* STEP 5 - REPEATABILITY */}
+        {/* ========================= */}
+        {/* STEP 5 */}
+        {/* ========================= */}
+
         {step === 5 && (
           <div className="rounded-2xl bg-white p-6 shadow-sm md:p-8">
 
@@ -986,13 +1428,13 @@ export default function Home() {
               </h2>
 
               <p className="mt-2 text-slate-600">
-                Repeat the same load and enter each indicated
-                reading.
+                Enter repeated readings for the same test load.
               </p>
 
             </div>
 
             {/* Test Load */}
+
             <div>
 
               <label className="font-medium text-slate-800">
@@ -1003,134 +1445,352 @@ export default function Home() {
                 type="number"
                 value={repeatabilityLoad}
                 onChange={(e) =>
-                  setRepeatabilityLoad(e.target.value)
+                  setRepeatabilityLoad(
+                    e.target.value
+                  )
                 }
                 placeholder="e.g. 120"
                 className="mt-2 w-full rounded-xl border border-slate-300 p-3"
                 step="0.001"
               />
 
-              <p className="mt-2 text-sm text-slate-500">
-                Accuracy Class: {accuracyClass}
-              </p>
-
             </div>
 
-            {/* Reading Count */}
-            <div className="mt-6 rounded-xl bg-slate-50 p-4">
+            {/* Reading Information */}
 
-              <p className="text-sm text-slate-500">
+            <div className="mt-6 rounded-xl bg-blue-50 p-5">
+
+              <p className="text-sm text-slate-600">
+                Accuracy Class
+              </p>
+
+              <p className="mt-1 text-lg font-bold text-slate-900">
+                {accuracyClass}
+              </p>
+
+              <p className="mt-3 text-sm text-slate-600">
                 Required Readings
               </p>
 
-              <p className="mt-1 text-xl font-bold text-slate-900">
+              <p className="mt-1 text-lg font-bold text-blue-600">
                 {requiredRepeatabilityReadings}
               </p>
 
             </div>
 
-            {/* Initialize */}
-            {repeatabilityReadings.length === 0 && (
-              <button
-                onClick={initializeRepeatabilityReadings}
-                className="mt-6 rounded-xl border border-blue-300 px-5 py-3 font-semibold text-blue-600 hover:bg-blue-50"
-              >
-                Start Repeatability Test
-              </button>
-            )}
-
             {/* Readings */}
-            {repeatabilityReadings.length > 0 && (
-              <div className="mt-8">
 
-                <h3 className="text-lg font-semibold text-slate-900">
-                  Indicated Readings
-                </h3>
+            <div className="mt-8">
 
-                <div className="mt-5 grid gap-5 md:grid-cols-2">
+              <h3 className="text-lg font-semibold text-slate-900">
+                Repeated Readings
+              </h3>
 
-                  {repeatabilityReadings.map(
-                    (reading, index) => (
+              <div className="mt-4 overflow-x-auto">
 
-                      <div key={index}>
+                <table className="w-full border-collapse">
 
-                        <label className="font-medium text-slate-800">
-                          Reading {index + 1}
-                        </label>
+                  <thead>
 
-                        <input
-                          type="number"
-                          value={reading}
-                          onChange={(e) =>
-                            updateRepeatabilityReading(
-                              index,
-                              e.target.value
-                            )
-                          }
-                          placeholder={`e.g. 120.02`}
-                          className="mt-2 w-full rounded-xl border border-slate-300 p-3"
-                          step="0.001"
-                        />
+                    <tr className="bg-slate-100">
 
-                      </div>
+                      <th className="border p-3">
+                        Reading
+                      </th>
 
-                    )
-                  )}
+                      <th className="border p-3">
+                        Indicated Value
+                      </th>
 
-                </div>
+                    </tr>
 
-                <div className="mt-8">
+                  </thead>
 
-                  <button
-                    onClick={evaluateRepeatability}
-                    disabled={repeatabilityLoading}
-                    className="w-full rounded-xl bg-black px-6 py-4 font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {repeatabilityLoading
-                      ? "Evaluating..."
-                      : "Evaluate Repeatability"}
-                  </button>
+                  <tbody>
 
-                </div>
+                    {repeatabilityReadings.map(
+                      (reading, index) => (
+
+                        <tr key={index}>
+
+                          <td className="border p-3 text-center font-semibold">
+                            Reading {index + 1}
+                          </td>
+
+                          <td className="border p-3">
+
+                            <input
+                              type="number"
+                              value={reading}
+                              onChange={(e) =>
+                                updateRepeatabilityReading(
+                                  index,
+                                  e.target.value
+                                )
+                              }
+                              placeholder="e.g. 120.020"
+                              className="w-full rounded-lg border border-slate-300 p-3"
+                              step="0.001"
+                            />
+
+                          </td>
+
+                        </tr>
+
+                      )
+                    )}
+
+                  </tbody>
+
+                </table>
 
               </div>
-            )}
+
+            </div>
+
+            {/* Evaluate */}
+
+            <div className="mt-8">
+
+              <button
+                onClick={
+                  evaluateRepeatability
+                }
+                disabled={
+                  repeatabilityLoading
+                }
+                className="w-full rounded-xl bg-black px-6 py-4 font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {repeatabilityLoading
+                  ? "Evaluating..."
+                  : "Evaluate Repeatability"}
+              </button>
+
+            </div>
 
             {/* Results */}
-            {repeatabilityResult && (
-              <div className="mt-8 rounded-2xl bg-slate-50 p-6">
 
-                <h3 className="text-lg font-semibold text-slate-900">
-                  Repeatability Result
+            {repeatabilityResult && (
+              <div className="mt-8">
+
+                <h3 className="text-xl font-bold text-slate-900">
+                  Repeatability Results
                 </h3>
+
+                {/* Summary */}
+
+                <div className="mt-5 grid gap-4 md:grid-cols-3">
+
+                  <div className="rounded-xl bg-slate-50 p-5">
+
+                    <p className="text-sm text-slate-500">
+                      Test Load
+                    </p>
+
+                    <p className="mt-1 text-xl font-bold">
+                      {
+                        repeatabilityResult.test_load
+                      }
+                    </p>
+
+                  </div>
+
+                  <div className="rounded-xl bg-slate-50 p-5">
+
+                    <p className="text-sm text-slate-500">
+                      Allowed MPE
+                    </p>
+
+                    <p className="mt-1 text-xl font-bold">
+                      {
+                        repeatabilityResult.allowed_mpe
+                      }
+                    </p>
+
+                  </div>
+
+                  <div className="rounded-xl bg-slate-50 p-5">
+
+                    <p className="text-sm text-slate-500">
+                      Repeatability Difference
+                    </p>
+
+                    <p className="mt-1 text-xl font-bold">
+                      {
+                        repeatabilityResult.repeatability_difference
+                      }
+                    </p>
+
+                  </div>
+
+                </div>
+
+                {/* Overall Status */}
+
+                <div className="mt-5 rounded-xl bg-slate-50 p-5">
+
+                  <p className="text-sm text-slate-500">
+                    Overall Status
+                  </p>
+
+                  <p
+                    className={`mt-1 text-3xl font-bold ${
+                      repeatabilityResult.overall_status ===
+                      "PASS"
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {
+                      repeatabilityResult.overall_status
+                    }
+                  </p>
+
+                </div>
+
+                {/* Status Summary */}
 
                 <div className="mt-5 grid gap-4 md:grid-cols-2">
 
-                  {Object.entries(
-                    repeatabilityResult
-                  ).map(([key, value]) => (
+                  <div className="rounded-xl border p-5">
 
-                    <div
-                      key={key}
-                      className="rounded-xl bg-white p-4 shadow-sm"
+                    <p className="text-sm text-slate-500">
+                      Individual Reading Status
+                    </p>
+
+                    <p
+                      className={`mt-1 text-xl font-bold ${
+                        repeatabilityResult.individual_status ===
+                        "PASS"
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
                     >
+                      {
+                        repeatabilityResult.individual_status
+                      }
+                    </p>
 
-                      <p className="text-sm text-slate-500">
-                        {key.replace(/_/g, " ")}
-                      </p>
+                  </div>
 
-                      <p className="mt-1 text-lg font-bold text-slate-900">
-                        {String(value)}
-                      </p>
+                  <div className="rounded-xl border p-5">
 
-                    </div>
+                    <p className="text-sm text-slate-500">
+                      Repeatability Status
+                    </p>
 
-                  ))}
+                    <p
+                      className={`mt-1 text-xl font-bold ${
+                        repeatabilityResult.repeatability_status ===
+                        "PASS"
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {
+                        repeatabilityResult.repeatability_status
+                      }
+                    </p>
+
+                  </div>
+
+                </div>
+
+                {/* Reading Details */}
+
+                <div className="mt-6">
+
+                  <h4 className="mb-3 text-lg font-semibold text-slate-900">
+                    Reading Details
+                  </h4>
+
+                  <div className="overflow-x-auto">
+
+                    <table className="w-full border-collapse">
+
+                      <thead>
+
+                        <tr className="bg-slate-100">
+
+                          <th className="border p-3">
+                            Reading
+                          </th>
+
+                          <th className="border p-3">
+                            Indicated
+                          </th>
+
+                          <th className="border p-3">
+                            Error
+                          </th>
+
+                          <th className="border p-3">
+                            Status
+                          </th>
+
+                        </tr>
+
+                      </thead>
+
+                      <tbody>
+
+                        {repeatabilityResult.details.map(
+                          (item) => (
+
+                            <tr
+                              key={
+                                item.reading_number
+                              }
+                            >
+
+                              <td className="border p-3 text-center">
+                                {
+                                  item.reading_number
+                                }
+                              </td>
+
+                              <td className="border p-3 text-center">
+                                {
+                                  item.indicated
+                                }
+                              </td>
+
+                              <td className="border p-3 text-center">
+                                {item.error}
+                              </td>
+
+                              <td className="border p-3 text-center font-bold">
+
+                                <span
+                                  className={
+                                    item.status ===
+                                    "PASS"
+                                      ? "text-green-600"
+                                      : "text-red-600"
+                                  }
+                                >
+                                  {item.status}
+                                </span>
+
+                              </td>
+
+                            </tr>
+
+                          )
+                        )}
+
+                      </tbody>
+
+                    </table>
+
+                  </div>
 
                 </div>
 
               </div>
             )}
+
+            {/* Navigation */}
 
             <div className="mt-8 flex justify-between">
 
@@ -1153,7 +1813,10 @@ export default function Home() {
           </div>
         )}
 
+        {/* ========================= */}
         {/* STEP 6 */}
+        {/* ========================= */}
+
         {step === 6 && (
           <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
 
@@ -1165,17 +1828,31 @@ export default function Home() {
               This module will be built next.
             </p>
 
-            <button
-              onClick={previousStep}
-              className="mt-6 rounded-xl border border-slate-300 px-6 py-3 font-semibold hover:bg-slate-100"
-            >
-              ← Back
-            </button>
+            <div className="mt-6 flex justify-between">
+
+              <button
+                onClick={previousStep}
+                className="rounded-xl border border-slate-300 px-6 py-3 font-semibold hover:bg-slate-100"
+              >
+                ← Back
+              </button>
+
+              <button
+                onClick={nextStep}
+                className="rounded-xl bg-blue-600 px-7 py-3 font-semibold text-white hover:bg-blue-700"
+              >
+                Continue →
+              </button>
+
+            </div>
 
           </div>
         )}
 
+        {/* ========================= */}
         {/* STEP 7 */}
+        {/* ========================= */}
+
         {step === 7 && (
           <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
 
@@ -1184,16 +1861,19 @@ export default function Home() {
             </h2>
 
             <p className="mt-3 text-slate-600">
-              Final review and report generation will be built
-              next.
+              Final report module will be built next.
             </p>
 
-            <button
-              onClick={previousStep}
-              className="mt-6 rounded-xl border border-slate-300 px-6 py-3 font-semibold hover:bg-slate-100"
-            >
-              ← Back
-            </button>
+            <div className="mt-6">
+
+              <button
+                onClick={previousStep}
+                className="rounded-xl border border-slate-300 px-6 py-3 font-semibold hover:bg-slate-100"
+              >
+                ← Back
+              </button>
+
+            </div>
 
           </div>
         )}
