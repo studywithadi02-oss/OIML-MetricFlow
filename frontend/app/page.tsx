@@ -596,6 +596,42 @@ export default function Home() {
       setTareZeroLoading(false);
     }
   };
+    // =========================
+  // STEP 7 HELPERS
+  // =========================
+
+  const getTestStatus = (
+    status: string | undefined
+  ) => {
+    if (!status) {
+      return "NOT EVALUATED";
+    }
+
+    return status;
+  };
+
+  const finalStatuses = [
+    weighingResult?.overall_status,
+    eccentricityResult?.status,
+    repeatabilityResult?.overall_status,
+    tareZeroResult?.overall_status,
+  ];
+
+  const completedTests = finalStatuses.filter(
+    (status) => status !== undefined
+  ).length;
+
+  const hasFailedTest = finalStatuses.some(
+    (status) => status === "FAIL"
+  );
+
+  const finalVerificationStatus =
+    completedTests < 4
+      ? "INCOMPLETE"
+      : hasFailedTest
+      ? "FAIL"
+      : "PASS";
+
 
   return (
     <main className="min-h-screen bg-slate-100 p-6 md:p-10">
@@ -2263,22 +2299,334 @@ export default function Home() {
         {/* STEP 7 */}
         {/* ========================= */}
 
+                {/* ========================= */}
+        {/* STEP 7 */}
+        {/* ========================= */}
+
         {step === 7 && (
-          <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
+          <div className="rounded-2xl bg-white p-6 shadow-sm md:p-8">
 
-            <h2 className="text-2xl font-bold text-slate-900">
-              Final Review
-            </h2>
+            <div className="mb-8">
 
-            <p className="mt-3 text-slate-600">
-              Final report module will be built next.
-            </p>
+              <h2 className="text-2xl font-bold text-slate-900">
+                Final Review
+              </h2>
 
-            <div className="mt-6">
+              <p className="mt-2 text-slate-600">
+                Review the instrument information and all completed
+                verification tests.
+              </p>
+
+            </div>
+
+            {/* INSTRUMENT INFORMATION */}
+
+            <div>
+
+              <h3 className="text-lg font-semibold text-slate-900">
+                Instrument Information
+              </h3>
+
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">
+                    Instrument Name
+                  </p>
+
+                  <p className="mt-1 font-semibold text-slate-900">
+                    {instrumentName || "Not provided"}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">
+                    Manufacturer
+                  </p>
+
+                  <p className="mt-1 font-semibold text-slate-900">
+                    {manufacturer || "Not provided"}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">
+                    Model
+                  </p>
+
+                  <p className="mt-1 font-semibold text-slate-900">
+                    {model || "Not provided"}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">
+                    Serial Number
+                  </p>
+
+                  <p className="mt-1 font-semibold text-slate-900">
+                    {serialNumber || "Not provided"}
+                  </p>
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* VERIFICATION PARAMETERS */}
+
+            <div className="mt-8">
+
+              <h3 className="text-lg font-semibold text-slate-900">
+                Verification Parameters
+              </h3>
+
+              <div className="mt-4 grid gap-4 md:grid-cols-3">
+
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">
+                    Accuracy Class
+                  </p>
+
+                  <p className="mt-1 font-semibold text-slate-900">
+                    {accuracyClass}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">
+                    Maximum Capacity (Max)
+                  </p>
+
+                  <p className="mt-1 font-semibold text-slate-900">
+                    {capacity}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">
+                    Scale Interval (e)
+                  </p>
+
+                  <p className="mt-1 font-semibold text-slate-900">
+                    {scaleE}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">
+                    Verification Scale Divisions
+                  </p>
+
+                  <p className="mt-1 font-semibold text-slate-900">
+                    {divisions > 0
+                      ? `${divisions.toLocaleString()}e`
+                      : "—"}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">
+                    MPE Multiplier
+                  </p>
+
+                  <p className="mt-1 font-semibold text-slate-900">
+                    {mpeMultiplier > 0
+                      ? `±${mpeMultiplier}e`
+                      : "—"}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">
+                    Allowed Error
+                  </p>
+
+                  <p className="mt-1 font-semibold text-slate-900">
+                    {allowedMpe > 0
+                      ? `±${allowedMpe.toFixed(6)}`
+                      : "—"}
+                  </p>
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* TEST RESULTS */}
+
+            <div className="mt-8">
+
+              <h3 className="text-lg font-semibold text-slate-900">
+                Verification Test Results
+              </h3>
+
+              <div className="mt-4 overflow-x-auto">
+
+                <table className="w-full border-collapse">
+
+                  <thead>
+
+                    <tr className="bg-slate-100">
+
+                      <th className="border p-3 text-left">
+                        Test
+                      </th>
+
+                      <th className="border p-3 text-left">
+                        Status
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    <tr>
+                      <td className="border p-3 font-medium">
+                        Weighing Test
+                      </td>
+
+                      <td
+                        className={`border p-3 font-bold ${
+                          getTestStatus(
+                            weighingResult?.overall_status
+                          ) === "PASS"
+                            ? "text-green-600"
+                            : getTestStatus(
+                                weighingResult?.overall_status
+                              ) === "FAIL"
+                            ? "text-red-600"
+                            : "text-slate-500"
+                        }`}
+                      >
+                        {getTestStatus(
+                          weighingResult?.overall_status
+                        )}
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td className="border p-3 font-medium">
+                        Eccentricity Test
+                      </td>
+
+                      <td
+                        className={`border p-3 font-bold ${
+                          getTestStatus(
+                            eccentricityResult?.status
+                          ) === "PASS"
+                            ? "text-green-600"
+                            : getTestStatus(
+                                eccentricityResult?.status
+                              ) === "FAIL"
+                            ? "text-red-600"
+                            : "text-slate-500"
+                        }`}
+                      >
+                        {getTestStatus(
+                          eccentricityResult?.status
+                        )}
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td className="border p-3 font-medium">
+                        Repeatability Test
+                      </td>
+
+                      <td
+                        className={`border p-3 font-bold ${
+                          getTestStatus(
+                            repeatabilityResult?.overall_status
+                          ) === "PASS"
+                            ? "text-green-600"
+                            : getTestStatus(
+                                repeatabilityResult?.overall_status
+                              ) === "FAIL"
+                            ? "text-red-600"
+                            : "text-slate-500"
+                        }`}
+                      >
+                        {getTestStatus(
+                          repeatabilityResult?.overall_status
+                        )}
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td className="border p-3 font-medium">
+                        Tare / Zero Test
+                      </td>
+
+                      <td
+                        className={`border p-3 font-bold ${
+                          getTestStatus(
+                            tareZeroResult?.overall_status
+                          ) === "PASS"
+                            ? "text-green-600"
+                            : getTestStatus(
+                                tareZeroResult?.overall_status
+                              ) === "FAIL"
+                            ? "text-red-600"
+                            : "text-slate-500"
+                        }`}
+                      >
+                        {getTestStatus(
+                          tareZeroResult?.overall_status
+                        )}
+                      </td>
+                    </tr>
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+            </div>
+
+            {/* FINAL STATUS */}
+
+            <div className="mt-8 rounded-2xl bg-slate-50 p-6">
+
+              <p className="text-sm text-slate-500">
+                Final Verification Status
+              </p>
+
+              <p
+                className={`mt-2 text-4xl font-bold ${
+                  finalVerificationStatus === "PASS"
+                    ? "text-green-600"
+                    : finalVerificationStatus === "FAIL"
+                    ? "text-red-600"
+                    : "text-amber-600"
+                }`}
+              >
+                {finalVerificationStatus}
+              </p>
+
+              <p className="mt-3 text-sm text-slate-600">
+                {completedTests} of 4 verification tests completed.
+              </p>
+
+              {finalVerificationStatus === "INCOMPLETE" && (
+                <p className="mt-2 text-sm text-slate-500">
+                  Complete all four verification tests before issuing
+                  the final result.
+                </p>
+              )}
+
+            </div>
+
+            {/* NAVIGATION */}
+
+            <div className="mt-8 flex justify-between">
 
               <button
                 onClick={previousStep}
-                className="rounded-xl border border-slate-300 px-6 py-3 font-semibold hover:bg-slate-100"
+                className="rounded-xl border border-slate-300 px-7 py-3 font-semibold hover:bg-slate-100"
               >
                 ← Back
               </button>
