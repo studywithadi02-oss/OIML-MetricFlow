@@ -128,6 +128,26 @@ export default function Home() {
 
   const [repeatabilityLoading, setRepeatabilityLoading] =
     useState(false);
+      // =========================
+  // STEP 6
+  // =========================
+
+  const [zeroErrors, setZeroErrors] = useState<string[]>([
+    "",
+    "",
+    "",
+  ]);
+
+  const [tareErrors, setTareErrors] = useState<string[]>([
+    "",
+    "",
+  ]);
+
+  const [tareZeroResult, setTareZeroResult] =
+    useState<any>(null);
+
+  const [tareZeroLoading, setTareZeroLoading] =
+    useState(false);
 
   // =========================
   // NAVIGATION
@@ -492,6 +512,88 @@ export default function Home() {
       );
     } finally {
       setRepeatabilityLoading(false);
+    }
+  };
+    // =========================
+  // STEP 6 FUNCTIONS
+  // =========================
+
+  const updateZeroError = (
+    index: number,
+    value: string
+  ) => {
+    const updated = [...zeroErrors];
+
+    updated[index] = value;
+
+    setZeroErrors(updated);
+  };
+
+  const updateTareError = (
+    index: number,
+    value: string
+  ) => {
+    const updated = [...tareErrors];
+
+    updated[index] = value;
+
+    setTareErrors(updated);
+  };
+
+  const evaluateTareZero = async () => {
+    const validZeroErrors = zeroErrors
+      .filter((error) => error !== "")
+      .map(Number);
+
+    const validTareErrors = tareErrors
+      .filter((error) => error !== "")
+      .map(Number);
+
+    if (
+      validZeroErrors.length === 0 &&
+      validTareErrors.length === 0
+    ) {
+      alert(
+        "Please enter at least one zero or tare error."
+      );
+      return;
+    }
+
+    setTareZeroLoading(true);
+    setTareZeroResult(null);
+
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/evaluate/tare-zero",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            scale_e: Number(scaleE),
+            zero_errors: validZeroErrors,
+            tare_errors: validTareErrors,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Tare / Zero evaluation failed"
+        );
+      }
+
+      const data = await response.json();
+
+      setTareZeroResult(data);
+    } catch (error) {
+      console.error(error);
+      alert(
+        "Could not connect to backend."
+      );
+    } finally {
+      setTareZeroLoading(false);
     }
   };
 
@@ -1813,33 +1915,341 @@ export default function Home() {
           </div>
         )}
 
-        {/* ========================= */}
+              {/* ========================= */}
         {/* STEP 6 */}
         {/* ========================= */}
 
         {step === 6 && (
-          <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
+          <div className="rounded-2xl bg-white p-6 shadow-sm md:p-8">
 
-            <h2 className="text-2xl font-bold text-slate-900">
-              Tare / Zero Test
-            </h2>
+            <div className="mb-8">
 
-            <p className="mt-3 text-slate-600">
-              This module will be built next.
-            </p>
+              <h2 className="text-2xl font-bold text-slate-900">
+                Tare / Zero Test
+              </h2>
 
-            <div className="mt-6 flex justify-between">
+              <p className="mt-2 text-slate-600">
+                Enter the measured errors obtained during the
+                zero-setting and tare-setting tests.
+              </p>
+
+            </div>
+
+            {/* Scale Information */}
+
+            <div className="rounded-xl bg-slate-50 p-5">
+
+              <p className="text-sm text-slate-500">
+                Scale Interval (e)
+              </p>
+
+              <p className="mt-1 text-xl font-bold">
+                {scaleE}
+              </p>
+
+              <p className="mt-3 text-sm text-slate-500">
+                Current Scale Class
+              </p>
+
+              <p className="mt-1 text-xl font-bold">
+                {accuracyClass}
+              </p>
+
+            </div>
+
+            {/* ZERO SETTING */}
+
+            <div className="mt-8">
+
+              <h3 className="text-lg font-semibold text-slate-900">
+                Zero-Setting Test
+              </h3>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Enter measured zero-setting error values.
+              </p>
+
+              <div className="mt-5 grid gap-5 md:grid-cols-3">
+
+                {zeroErrors.map((error, index) => (
+
+                  <div key={index}>
+
+                    <label className="font-medium text-slate-800">
+                      Zero Test {index + 1}
+                    </label>
+
+                    <input
+                      type="number"
+                      value={error}
+                      onChange={(e) =>
+                        updateZeroError(
+                          index,
+                          e.target.value
+                        )
+                      }
+                      placeholder="e.g. 0.005"
+                      className="mt-2 w-full rounded-xl border border-slate-300 p-3"
+                      step="0.001"
+                    />
+
+                  </div>
+
+                ))}
+
+              </div>
+
+            </div>
+
+            {/* TARE SETTING */}
+
+            <div className="mt-8">
+
+              <h3 className="text-lg font-semibold text-slate-900">
+                Tare-Setting Test
+              </h3>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Enter measured tare-setting error values.
+              </p>
+
+              <div className="mt-5 grid gap-5 md:grid-cols-2">
+
+                {tareErrors.map((error, index) => (
+
+                  <div key={index}>
+
+                    <label className="font-medium text-slate-800">
+                      Tare Test {index + 1}
+                    </label>
+
+                    <input
+                      type="number"
+                      value={error}
+                      onChange={(e) =>
+                        updateTareError(
+                          index,
+                          e.target.value
+                        )
+                      }
+                      placeholder="e.g. 0.006"
+                      className="mt-2 w-full rounded-xl border border-slate-300 p-3"
+                      step="0.001"
+                    />
+
+                  </div>
+
+                ))}
+
+              </div>
+
+            </div>
+
+            {/* EVALUATE */}
+
+            <div className="mt-8">
+
+              <button
+                onClick={evaluateTareZero}
+                disabled={tareZeroLoading}
+                className="w-full rounded-xl bg-black px-6 py-4 font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {tareZeroLoading
+                  ? "Evaluating..."
+                  : "Evaluate Tare / Zero Test"}
+              </button>
+
+            </div>
+
+            {/* RESULTS */}
+
+            {tareZeroResult && (
+              <div className="mt-8">
+
+                <h3 className="text-xl font-bold text-slate-900">
+                  Tare / Zero Results
+                </h3>
+
+                {/* SUMMARY */}
+
+                <div className="mt-5 grid gap-4 md:grid-cols-3">
+
+                  <div className="rounded-xl bg-slate-50 p-5">
+
+                    <p className="text-sm text-slate-500">
+                      Allowed Tolerance
+                    </p>
+
+                    <p className="mt-1 text-xl font-bold">
+                      {tareZeroResult.allowed_tolerance}
+                    </p>
+
+                  </div>
+
+                  <div className="rounded-xl bg-slate-50 p-5">
+
+                    <p className="text-sm text-slate-500">
+                      Zero Setting
+                    </p>
+
+                    <p
+                      className={`mt-1 text-xl font-bold ${
+                        tareZeroResult.zero_setting_status ===
+                        "PASS"
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {tareZeroResult.zero_setting_status}
+                    </p>
+
+                  </div>
+
+                  <div className="rounded-xl bg-slate-50 p-5">
+
+                    <p className="text-sm text-slate-500">
+                      Tare Setting
+                    </p>
+
+                    <p
+                      className={`mt-1 text-xl font-bold ${
+                        tareZeroResult.tare_setting_status ===
+                        "PASS"
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {tareZeroResult.tare_setting_status}
+                    </p>
+
+                  </div>
+
+                </div>
+
+                {/* OVERALL STATUS */}
+
+                <div className="mt-5 rounded-xl bg-slate-50 p-5">
+
+                  <p className="text-sm text-slate-500">
+                    Overall Status
+                  </p>
+
+                  <p
+                    className={`mt-1 text-3xl font-bold ${
+                      tareZeroResult.overall_status ===
+                      "PASS"
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {tareZeroResult.overall_status}
+                  </p>
+
+                </div>
+
+                {/* DETAILS */}
+
+                <div className="mt-6 overflow-x-auto">
+
+                  <h4 className="mb-3 text-lg font-semibold text-slate-900">
+                    Test Details
+                  </h4>
+
+                  <table className="w-full border-collapse">
+
+                    <thead>
+
+                      <tr className="bg-slate-100">
+
+                        <th className="border p-3">
+                          Test Type
+                        </th>
+
+                        <th className="border p-3">
+                          Test Number
+                        </th>
+
+                        <th className="border p-3">
+                          Measured Error
+                        </th>
+
+                        <th className="border p-3">
+                          Allowed Tolerance
+                        </th>
+
+                        <th className="border p-3">
+                          Status
+                        </th>
+
+                      </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                      {tareZeroResult.details.map(
+                        (item: any, index: number) => (
+
+                          <tr key={index}>
+
+                            <td className="border p-3 text-center">
+                              {item.test_type}
+                            </td>
+
+                            <td className="border p-3 text-center">
+                              {item.test_number}
+                            </td>
+
+                            <td className="border p-3 text-center">
+                              {item.measured_error}
+                            </td>
+
+                            <td className="border p-3 text-center">
+                              {item.allowed_tolerance}
+                            </td>
+
+                            <td className="border p-3 text-center font-bold">
+
+                              <span
+                                className={
+                                  item.status === "PASS"
+                                    ? "text-green-600"
+                                    : "text-red-600"
+                                }
+                              >
+                                {item.status}
+                              </span>
+
+                            </td>
+
+                          </tr>
+
+                        )
+                      )}
+
+                    </tbody>
+
+                  </table>
+
+                </div>
+
+              </div>
+            )}
+
+            {/* NAVIGATION */}
+
+            <div className="mt-8 flex justify-between">
 
               <button
                 onClick={previousStep}
-                className="rounded-xl border border-slate-300 px-6 py-3 font-semibold hover:bg-slate-100"
+                className="rounded-xl border border-slate-300 px-7 py-3 font-semibold hover:bg-slate-100"
               >
                 ← Back
               </button>
 
               <button
                 onClick={nextStep}
-                className="rounded-xl bg-blue-600 px-7 py-3 font-semibold text-white hover:bg-blue-700"
+                className="rounded-xl bg-blue-600 px-8 py-3 font-semibold text-white hover:bg-blue-700"
               >
                 Continue →
               </button>

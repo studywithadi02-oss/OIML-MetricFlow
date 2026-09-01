@@ -6,6 +6,7 @@ from typing import List
 from rules.weighing import evaluate_weighing_test
 from rules.eccentricity import evaluate_eccentricity_test
 from rules.repeatability import evaluate_repeatability_test
+from rules.tare import evaluate_tare_zero_test
 
 
 app = FastAPI(
@@ -49,6 +50,12 @@ class RepeatabilityTestRequest(BaseModel):
     scale_e: float
     accuracy_class: str
     readings: List[float]
+
+
+class TareZeroTestRequest(BaseModel):
+    scale_e: float
+    zero_errors: List[float] = []
+    tare_errors: List[float] = []
 
 
 @app.get("/")
@@ -103,6 +110,20 @@ def evaluate_repeatability(
         readings=request.readings,
         scale_e=request.scale_e,
         accuracy_class=request.accuracy_class
+    )
+
+    return result
+
+
+@app.post("/evaluate/tare-zero")
+def evaluate_tare_zero(
+    request: TareZeroTestRequest
+):
+
+    result = evaluate_tare_zero_test(
+        scale_e=request.scale_e,
+        zero_errors=request.zero_errors,
+        tare_errors=request.tare_errors
     )
 
     return result
