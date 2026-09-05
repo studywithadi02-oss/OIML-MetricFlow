@@ -69,6 +69,53 @@ export default function Home() {
   const [manufacturer, setManufacturer] = useState("");
   const [model, setModel] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
+  const [inspectorName, setInspectorName] = useState("");
+  type InspectionHistoryItem = {
+  id: number;
+  session_id: string;
+  inspector_name: string;
+  instrument_name: string;
+  manufacturer: string;
+  model: string;
+  serial_number: string;
+  accuracy_class: string;
+  capacity: number;
+  scale_e: number;
+  weighing_status: string;
+  eccentricity_status: string;
+  repeatability_status: string;
+  tare_zero_status: string;
+  final_status: string;
+  created_at: string;
+};
+
+const [showHistory, setShowHistory] = useState(false);
+const [history, setHistory] = useState<InspectionHistoryItem[]>([]);
+const [historyLoading, setHistoryLoading] = useState(false);
+const [selectedInspection, setSelectedInspection] =
+  useState<InspectionHistoryItem | null>(null);
+const loadHistory = async () => {
+  setHistoryLoading(true);
+
+  try {
+    const response = await fetch(
+      "http://127.0.0.1:8000/inspections"
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to load inspection history");
+    }
+
+    const data = await response.json();
+
+    setHistory(data.inspections || []);
+  } catch (error) {
+    console.error(error);
+    alert("Could not load inspection history.");
+  } finally {
+    setHistoryLoading(false);
+  }
+};
 
   // =========================
   // STEP 2
@@ -77,6 +124,7 @@ export default function Home() {
   const [accuracyClass, setAccuracyClass] = useState("CLASS III");
   const [capacity, setCapacity] = useState("150");
   const [scaleE, setScaleE] = useState("0.05");
+  const [savingInspection, setSavingInspection] = useState(false);
 
   // =========================
   // STEP 3
@@ -596,6 +644,85 @@ export default function Home() {
       setTareZeroLoading(false);
     }
   };
+    const saveInspection = async () => {
+    
+     if (
+  !inspectorName ||
+  !instrumentName ||
+  !manufacturer ||
+  !model ||
+  !serialNumber
+) {
+      alert("Please complete the instrument information first.");
+      return;
+    }
+
+    if (
+      !weighingResult ||
+      !eccentricityResult ||
+      !repeatabilityResult ||
+      !tareZeroResult
+    ) {
+      alert("Please complete all four verification tests first.");
+      return;
+    }
+
+    setSavingInspection(true);
+
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/inspections",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            inspector_name: inspectorName,
+
+            instrument_name: instrumentName,
+            manufacturer: manufacturer,
+            model: model,
+            serial_number: serialNumber,
+
+            accuracy_class: accuracyClass,
+            capacity: Number(capacity),
+            scale_e: Number(scaleE),
+
+            weighing_status:
+              weighingResult.overall_status,
+
+            eccentricity_status:
+              eccentricityResult.status,
+
+            repeatability_status:
+              repeatabilityResult.overall_status,
+
+            tare_zero_status:
+              tareZeroResult.overall_status,
+
+            final_status:
+              finalVerificationStatus,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to save inspection.");
+      }
+
+      const data = await response.json();
+
+      alert(
+        `Inspection saved successfully!\nSession ID: ${data.session_id}`
+      );
+    } catch (error) {
+      console.error(error);
+      alert("Could not save inspection.");
+    } finally {
+      setSavingInspection(false);
+    }
+  };
     // =========================
   // STEP 7 HELPERS
   // =========================
@@ -650,14 +777,329 @@ export default function Home() {
           <p className="mt-2 text-slate-600">
             OIML R-76 Weighing Instrument Test System
           </p>
+          <div className="mb-6 flex gap-3">
+  <button
+    onClick={() => {
+      setShowHistory(false);
+    }}
+    className="rounded-lg bg-black px-4 py-2 text-white"
+  >
+    New Inspection
+  </button>
+
+  <button
+    onClick={() => {
+      setShowHistory(true);
+      loadHistory();
+    }}
+    className="rounded-lg border px-4 py-2"
+  >
+    Inspection History
+  </button>
+</div>
+{showHistory && (
+  <div className="mb-6 rounded-2xl bg-white p-6 shadow-sm">
+    <h2 className="mb-4 text-xl font-bold text-slate-900">
+      Inspection History
+    </h2>
+
+    {historyLoading ? (
+      <p className="text-slate-600">Loading history...</p>
+    ) : history.length === 0 ? (
+      <p className="text-slate-600">
+        No inspections saved yet.
+      </p>
+    ) : (
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b bg-slate-50 text-left">
+              <th className="p-3">Session ID</th>
+              <th className="p-3">Inspector</th>
+              <th className="p-3">Instrument</th>
+              <th className="p-3">Model</th>
+              <th className="p-3">Date / Time</th>
+              <th className="p-3">Final Status</th>
+              <th className="p-3">Report</th>
+              <th className="p-3">Details</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {history.map((item) => (
+              <tr
+                key={item.session_id}
+                className="border-b hover:bg-slate-50"
+              >
+                <td className="p-3 font-medium">
+                  {item.session_id}
+                </td>
+
+                <td className="p-3">
+                  {item.inspector_name}
+                </td>
+
+                <td className="p-3">
+                  {item.instrument_name}
+                </td>
+
+                <td className="p-3">
+                  {item.model}
+                </td>
+
+                <td className="p-3">
+                  {new Date(item.created_at).toLocaleString()}
+                </td>
+
+                <td className="p-3">
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                      item.final_status === "PASS"
+                        ? "bg-green-100 text-green-700"
+                        : item.final_status === "FAIL"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-yellow-100 text-yellow-700"
+                    }`}
+                  >
+                    {item.final_status}
+                  </span>
+                </td>
+                <td className="p-3">
+  <button
+    onClick={() => {
+      window.open(
+        `http://127.0.0.1:8000/inspections/${item.session_id}/report`,
+        "_blank"
+      );
+    }}
+    className="rounded-lg bg-blue-600 px-3 py-1 text-white hover:bg-blue-700"
+  >
+    Open Report
+  </button>
+</td>
+<td className="p-3">
+  <button
+    onClick={() => {
+      setSelectedInspection(item);
+    }}
+    className="rounded-lg border border-slate-300 px-3 py-1 font-medium hover:bg-slate-100"
+  >
+    View Details
+  </button>
+</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      
+      
+    )}
+    {selectedInspection && (
+  <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-6">
+
+    <div className="mb-5 flex items-center justify-between">
+      <h3 className="text-xl font-bold text-slate-900">
+        Inspection Details
+      </h3>
+
+      <button
+        onClick={() => {
+          setSelectedInspection(null);
+        }}
+        className="rounded-lg border border-slate-300 px-4 py-2 font-medium hover:bg-white"
+      >
+        Close
+      </button>
+    </div>
+
+    <div className="grid gap-4 md:grid-cols-2">
+
+      <div>
+        <p className="text-sm text-slate-500">Session ID</p>
+        <p className="font-semibold text-slate-900">
+          {selectedInspection.session_id}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-sm text-slate-500">Inspector</p>
+        <p className="font-semibold text-slate-900">
+          {selectedInspection.inspector_name}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-sm text-slate-500">Instrument</p>
+        <p className="font-semibold text-slate-900">
+          {selectedInspection.instrument_name}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-sm text-slate-500">Manufacturer</p>
+        <p className="font-semibold text-slate-900">
+          {selectedInspection.manufacturer}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-sm text-slate-500">Model</p>
+        <p className="font-semibold text-slate-900">
+          {selectedInspection.model}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-sm text-slate-500">Serial Number</p>
+        <p className="font-semibold text-slate-900">
+          {selectedInspection.serial_number}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-sm text-slate-500">Accuracy Class</p>
+        <p className="font-semibold text-slate-900">
+          {selectedInspection.accuracy_class}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-sm text-slate-500">Capacity (Max)</p>
+        <p className="font-semibold text-slate-900">
+          {selectedInspection.capacity}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-sm text-slate-500">Scale Interval (e)</p>
+        <p className="font-semibold text-slate-900">
+          {selectedInspection.scale_e}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-sm text-slate-500">Date & Time</p>
+        <p className="font-semibold text-slate-900">
+          {new Date(
+            selectedInspection.created_at
+          ).toLocaleString()}
+        </p>
+      </div>
+
+    </div>
+
+    <div className="mt-6">
+      <p className="mb-3 text-sm text-slate-500">
+        Test Results
+      </p>
+
+      <div className="grid gap-3 md:grid-cols-2">
+
+        <div className="rounded-xl bg-white p-4 shadow-sm">
+  <p className="text-sm text-slate-500">
+    Weighing Test
+  </p>
+
+  <p
+    className={`mt-1 font-bold ${
+      selectedInspection.weighing_status === "PASS"
+        ? "text-green-600"
+        : selectedInspection.weighing_status === "FAIL"
+        ? "text-red-600"
+        : "text-yellow-600"
+    }`}
+  >
+    {selectedInspection.weighing_status}
+  </p>
+</div>
+
+        <div className="rounded-xl bg-white p-4 shadow-sm">
+          <p className="text-sm text-slate-500">
+            Eccentricity Test
+          </p>
+          <p
+  className={`mt-1 font-bold ${
+    selectedInspection.eccentricity_status === "PASS"
+      ? "text-green-600"
+      : selectedInspection.eccentricity_status === "FAIL"
+      ? "text-red-600"
+      : "text-yellow-600"
+  }`}
+>
+  {selectedInspection.eccentricity_status}
+</p>
+        </div>
+
+        <div className="rounded-xl bg-white p-4 shadow-sm">
+          <p className="text-sm text-slate-500">
+            Repeatability Test
+          </p>
+          <p
+  className={`mt-1 font-bold ${
+    selectedInspection.repeatability_status === "PASS"
+      ? "text-green-600"
+      : selectedInspection.repeatability_status === "FAIL"
+      ? "text-red-600"
+      : "text-yellow-600"
+  }`}
+>
+  {selectedInspection.repeatability_status}
+</p>
+        </div>
+
+        <div className="rounded-xl bg-white p-4 shadow-sm">
+          <p className="text-sm text-slate-500">
+            Tare / Zero Test
+          </p>
+          <p
+  className={`mt-1 font-bold ${
+    selectedInspection.tare_zero_status === "PASS"
+      ? "text-green-600"
+      : selectedInspection.tare_zero_status === "FAIL"
+      ? "text-red-600"
+      : "text-yellow-600"
+  }`}
+>
+  {selectedInspection.tare_zero_status}
+</p>
+        </div>
+
+      </div>
+    </div>
+
+    <div className="mt-6 rounded-xl bg-white p-5 shadow-sm">
+      <p className="text-sm text-slate-500">
+        Final Verification Status
+      </p>
+
+      <p
+  className={`mt-1 text-2xl font-bold ${
+    selectedInspection.final_status === "PASS"
+      ? "text-green-600"
+      : selectedInspection.final_status === "FAIL"
+      ? "text-red-600"
+      : "text-yellow-600"
+  }`}
+>
+  {selectedInspection.final_status}
+</p>
+    </div>
+
+  </div>
+)}
+  </div>
+)}
+
 
         </div>
+        <div className={showHistory ? "hidden" : "block"}></div>
 
         {/* ========================= */}
         {/* PROGRESS */}
         {/* ========================= */}
 
-        <div className="mb-8 rounded-2xl bg-white p-5 shadow-sm">
+        <div hidden={showHistory} className="mb-8 rounded-2xl bg-white p-5 shadow-sm">
 
           <div className="flex items-center justify-between text-sm">
 
@@ -797,12 +1239,26 @@ export default function Home() {
                     setSerialNumber(
                       e.target.value
                     )
+                    
                   }
                   placeholder="e.g. SN-2026-001"
                   className="mt-2 w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500"
                 />
 
               </div>
+              <div>
+  <label className="mb-1 block text-sm font-medium">
+    Inspector Name
+  </label>
+
+  <input
+    type="text"
+    value={inspectorName}
+    onChange={(e) => setInspectorName(e.target.value)}
+    placeholder="Enter inspector name"
+    className="w-full rounded-lg border px-3 py-2"
+  />
+</div>
 
             </div>
 
@@ -2629,13 +3085,23 @@ export default function Home() {
                 className="rounded-xl border border-slate-300 px-7 py-3 font-semibold hover:bg-slate-100"
               >
                 ← Back
+                
               </button>
+              
+              <button
+  onClick={saveInspection}
+  disabled={savingInspection}
+  className="rounded-xl bg-blue-600 px-7 py-3 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+>
+  {savingInspection ? "Saving..." : "Save Inspection"}
+</button>
 
             </div>
 
           </div>
+          
         )}
-
+       
       </div>
     </main>
   );

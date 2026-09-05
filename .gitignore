@@ -10,3 +10,12 @@ frontend/.next/
 # Environment files
 .env
 .env.local
+# SQLite database
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated PDF reports
+backend/reports/
+backend/database/__pycache__/
+backend/database/metricflow.db
